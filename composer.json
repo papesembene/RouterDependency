@@ -1,0 +1,24 @@
+{
+    "name": "mrsems/router-php",
+    "type": "library",
+    "description": "A simple router dependency injection library",
+    "keywords": ["php", "router", "routing", "framework"],
+    "autoload": {
+        "psr-4": {
+            "App\\Router\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "pape sembene",
+            "email": "sembenpape4@gmail.com"
+        }
+    ],
+ 
+    "require": {
+        "php": ">=7.4"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "license": "MIT"
+}

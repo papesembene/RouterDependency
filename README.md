@@ -31,6 +31,13 @@ return [
         'middlewares' => ['auth'],
         'methods' => ['GET'],
     ],
+    'client/{id}' => [
+        'controller' => App\Controllers\UserController::class,
+        'method' => 'show',
+        'middlewares' => ['auth'],
+        'methods' => ['GET'],
+    ],
+
     
 ];
 ```
@@ -121,7 +128,7 @@ votre-projet/
 
 ## Fonctionnalités
 
-- ✅ Support des méthodes HTTP (GET, POST, PUT, DELETE, etc.)
+- ✅ Support des méthodes HTTP (GET, POST, etc.)
 - ✅ Système de middlewares
 - ✅ Contrôleurs organisés par classes
 - ✅ Configuration simple via fichiers PHP

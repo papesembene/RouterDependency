@@ -109,6 +109,52 @@ $middlewares = require 'middlewares.php';
 Router::resolve($routes, $middlewares);
 ```
 
+## Injection de dépendances et mapping d’interfaces
+
+Le routeur instancie automatiquement vos contrôleurs et leurs dépendances grâce à la réflexion.  
+Si un constructeur de contrôleur attend une interface, vous pouvez définir le mapping interface => classe concrète :
+
+```php
+use App\Router\Router;
+
+Router::setDependencyMap([
+    App\Contracts\IUserRepository::class => App\Repositories\UserRepository::class,
+    // Ajoutez d'autres mappings ici
+]);
+```
+
+**Exemple d’utilisation dans une route** :
+
+```php
+return [
+    '/dashboard' => [
+        'controller' => App\Controllers\DashboardController::class,
+        'method' => 'index',
+        'middlewares' => ['auth'],
+        'methods' => ['GET'],
+    ],
+];
+```
+
+Votre contrôleur peut alors recevoir des dépendances dans son constructeur :
+
+```php
+namespace App\Controllers;
+
+use App\Contracts\IUserRepository;
+
+class DashboardController
+{
+    public function __construct(IUserRepository $userRepo) {
+        $this->userRepo = $userRepo;
+    }
+
+    public function index() {
+        // ...
+    }
+}
+```
+
 ##  Structure du projet
 
 ```

@@ -3,6 +3,8 @@ namespace App\Router;
 
 class Router
 {
+    private static array $dependencyMap = [];
+
     /**
      * Résout la route en fonction de la méthode HTTP et de l'URI.
      *
@@ -100,7 +102,7 @@ class Router
             return;
         }
 
-        $controller = new $controllerClass();
+        $controller = self::instantiateWithDependencies($controllerClass);
         if (!method_exists($controller, $action)) {
             http_response_code(500);
             echo "Méthode {$action} introuvable.";
@@ -161,5 +163,56 @@ class Router
                 }
             }
         }
+    }
+
+    /**
+     * Instancie une classe avec ses dépendances en utilisant la réflexion.
+     *
+     * @param string $class Le nom de la classe à instancier.
+     * @return object Une instance de la classe.
+     */
+    private static function instantiateWithDependencies(string $class)
+    {
+        // Si c'est une interface, on cherche dans le mapping utilisateur
+        if (interface_exists($class)) {
+            if (isset(self::$dependencyMap[$class])) {
+                $class = self::$dependencyMap[$class];
+            } else {
+                // Sinon, tente la convention de nommage (optionnel)
+                $concrete = preg_replace('/\\\I([A-Z])/', '\\\$1', $class);
+                if (class_exists($concrete)) {
+                    $class = $concrete;
+                } else {
+                    throw new \Exception("Impossible de résoudre l'implémentation concrète pour l'interface $class");
+                }
+            }
+        }
+
+        $reflection = new \ReflectionClass($class);
+        $constructor = $reflection->getConstructor();
+
+        if (!$constructor || $constructor->getNumberOfParameters() === 0) {
+            return new $class();
+        }
+
+        $dependencies = [];
+        foreach ($constructor->getParameters() as $param) {
+            $type = $param->getType();
+            if ($type && !$type->isBuiltin()) {
+                $depClass = $type->getName();
+                $dependencies[] = self::instantiateWithDependencies($depClass);
+            } else {
+                $dependencies[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
+            }
+        }
+        return $reflection->newInstanceArgs($dependencies);
+    }
+
+    /**
+     * Permet à l'utilisateur de définir ses propres mappings interface => classe concrète
+     */
+    public static function setDependencyMap(array $map): void
+    {
+        self::$dependencyMap = $map;
     }
 }

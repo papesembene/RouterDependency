@@ -93,6 +93,22 @@ class Router
             self::runMiddlewares($route['middlewares'], $middlewares);
         }
 
+        if (isset($route['handler'])) {
+            self::executeHandler($route['handler'], $params);
+            return;
+        }
+
+        if (isset($route['file'])) {
+            self::executeFile($route['file'], $params);
+            return;
+        }
+
+        if (!isset($route['controller'], $route['method'])) {
+            http_response_code(500);
+            echo "Route invalide : aucun contrôleur, handler ou fichier défini.";
+            return;
+        }
+
         $controllerClass = $route['controller'];
         $action = $route['method'];
 
@@ -115,6 +131,46 @@ class Router
         } else {
             $controller->$action();
         }
+    }
+
+    /**
+     * Exécute une fonction ou callable procédural.
+     *
+     * @param callable|string $handler Le handler à exécuter.
+     * @param array $params Les paramètres extraits de l'URI.
+     * @return void
+     */
+    private static function executeHandler($handler, array $params): void
+    {
+        if (!is_callable($handler)) {
+            http_response_code(500);
+            echo "Handler invalide.";
+            return;
+        }
+
+        if (!empty($params)) {
+            call_user_func($handler, $params);
+        } else {
+            call_user_func($handler);
+        }
+    }
+
+    /**
+     * Inclut un fichier PHP procédural.
+     *
+     * @param string $file Le fichier à inclure.
+     * @param array $params Les paramètres extraits de l'URI.
+     * @return void
+     */
+    private static function executeFile(string $file, array $params): void
+    {
+        if (!is_file($file)) {
+            http_response_code(500);
+            echo "Fichier {$file} introuvable.";
+            return;
+        }
+
+        require $file;
     }
 
     /**
@@ -153,15 +209,29 @@ class Router
     private static function runMiddlewares(array $routeMiddlewares, array $availableMiddlewares): void
     {
         foreach ($routeMiddlewares as $middlewareName) {
-            if (isset($availableMiddlewares[$middlewareName])) {
-                $class = $availableMiddlewares[$middlewareName];
-                if (class_exists($class)) {
-                    $middleware = new $class();
-                    if (is_callable($middleware)) {
-                        $middleware();
-                    }
-                }
+            if ((is_string($middlewareName) || is_int($middlewareName)) && isset($availableMiddlewares[$middlewareName])) {
+                self::executeMiddleware($availableMiddlewares[$middlewareName]);
+                continue;
             }
+
+            self::executeMiddleware($middlewareName);
+        }
+    }
+
+    /**
+     * Exécute un middleware défini comme classe invocable, fonction ou callable.
+     *
+     * @param mixed $middleware Le middleware à exécuter.
+     * @return void
+     */
+    private static function executeMiddleware($middleware): void
+    {
+        if (is_string($middleware) && class_exists($middleware)) {
+            $middleware = new $middleware();
+        }
+
+        if (is_callable($middleware)) {
+            call_user_func($middleware);
         }
     }
 

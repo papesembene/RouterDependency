@@ -11,7 +11,7 @@ composer require mrsems/router-php
 
 ##  Guide d'utilisation
 
-### 1. Configuration des routes
+### 1. Configuration des routes avec contrôleurs
 
 Créez un fichier `routes.php` à la racine de votre projet :
 
@@ -42,6 +42,70 @@ return [
 ];
 ```
 
+### Routes procédurales avec fonctions
+
+Vous pouvez aussi utiliser le routeur dans un projet PHP procédural, sans contrôleurs en classes.
+
+Déclarez vos fonctions avant d'appeler `Router::resolve()` :
+
+```php
+<?php
+function accueil()
+{
+    echo "Bienvenue sur la page d'accueil !";
+}
+
+function afficherClient(array $params)
+{
+    echo "Client : " . $params['id'];
+}
+```
+
+Puis configurez vos routes avec `handler` :
+
+```php
+<?php
+return [
+    '/' => [
+        'handler' => 'accueil',
+        'middlewares' => [],
+        'methods' => ['GET'],
+    ],
+    'client/{id}' => [
+        'handler' => 'afficherClient',
+        'middlewares' => ['auth'],
+        'methods' => ['GET'],
+    ],
+];
+```
+
+### Routes procédurales avec fichiers PHP
+
+Vous pouvez également diriger une route vers un fichier PHP :
+
+```php
+<?php
+return [
+    '/' => [
+        'file' => 'pages/accueil.php',
+        'middlewares' => [],
+        'methods' => ['GET'],
+    ],
+    'client/{id}' => [
+        'file' => 'pages/client.php',
+        'middlewares' => ['auth'],
+        'methods' => ['GET'],
+    ],
+];
+```
+
+Dans le fichier inclus, les paramètres de route sont disponibles dans `$params` :
+
+```php
+<?php
+echo "Client : " . $params['id'];
+```
+
 ### 2. Configuration des middlewares
 
 Créez un fichier `middlewares.php` :
@@ -51,6 +115,26 @@ Créez un fichier `middlewares.php` :
 return [
     'auth' => \App\Middlewares\AuthMiddleware::class,
 ];
+```
+
+Dans un projet procédural, un middleware peut aussi être une fonction :
+
+```php
+<?php
+return [
+    'auth' => 'verifierAuth',
+];
+```
+
+```php
+<?php
+function verifierAuth()
+{
+    if (!isset($_SESSION['user'])) {
+        header('Location: /login');
+        exit;
+    }
+}
 ```
 
 ### 3. Création d'un middleware
@@ -177,6 +261,7 @@ votre-projet/
 - ✅ Support des méthodes HTTP (GET, POST, etc.)
 - ✅ Système de middlewares
 - ✅ Contrôleurs organisés par classes
+- ✅ Routes procédurales avec fonctions
+- ✅ Routes procédurales avec fichiers PHP
 - ✅ Configuration simple via fichiers PHP
-
 

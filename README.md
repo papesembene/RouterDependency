@@ -226,7 +226,29 @@ return [
 
 Utilisez ce mode si votre projet PHP fonctionne avec des classes contrôleurs.
 
-### Étape 1 : créer `index.php`
+### Étape 1 : configurer l'autoload de votre projet
+
+Dans le `composer.json` de votre projet, ajoutez l'autoload de vos classes :
+
+```json
+{
+    "autoload": {
+        "psr-4": {
+            "App\\": "App/"
+        }
+    }
+}
+```
+
+Puis lancez :
+
+```bash
+composer dump-autoload
+```
+
+Cette étape permet à PHP de trouver vos contrôleurs, par exemple `App\Controllers\UserController`.
+
+### Étape 2 : créer `index.php`
 
 ```php
 <?php
@@ -242,7 +264,7 @@ Router::resolve($routes, $middlewares);
 
 Le fichier `middlewares.php` est optionnel.
 
-### Étape 2 : créer `routes.php`
+### Étape 3 : créer `routes.php`
 
 ```php
 <?php
@@ -273,7 +295,7 @@ return [
 
 La clé `middlewares` est optionnelle.
 
-### Étape 3 : créer le contrôleur
+### Étape 4 : créer le contrôleur
 
 Exemple de fichier `App/Controllers/UserController.php` :
 
@@ -295,7 +317,7 @@ class UserController
 }
 ```
 
-### Étape 4 : créer `middlewares.php` si nécessaire
+### Étape 5 : créer `middlewares.php` si nécessaire
 
 Ce fichier est optionnel.
 
@@ -306,7 +328,7 @@ return [
 ];
 ```
 
-### Étape 5 : créer le middleware si nécessaire
+### Étape 6 : créer le middleware si nécessaire
 
 Exemple de fichier `App/Middlewares/AuthMiddleware.php` :
 

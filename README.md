@@ -4,7 +4,7 @@ Un routeur PHP simple, léger et réutilisable pour vos applications web.
 
 Il fonctionne avec deux types de projets :
 
-- Projet PHP procédural : routes vers des fonctions ou des fichiers PHP.
+- Projet PHP procédural MVC : routes vers des fonctions contrôleurs.
 - Projet PHP orienté objet : routes vers des classes contrôleurs.
 
 ## Installation
@@ -40,16 +40,24 @@ require 'vendor/autoload.php';
 
 Elle permet à PHP de trouver automatiquement le routeur installé dans le dossier `vendor/`.
 
-## Projet procédural
+## Projet procédural MVC
 
-Utilisez ce mode si votre projet PHP fonctionne avec des fonctions ou des fichiers PHP simples.
+Utilisez ce mode si votre projet PHP est organisé en MVC, mais sans classes.
+
+Dans ce style :
+
+- `controllers/` contient les fonctions qui traitent les routes.
+- `models/` contient les fonctions liées aux données.
+- `views/` contient l'affichage HTML.
+- `routes.php` relie une URL à une fonction contrôleur.
 
 ### Étape 1 : créer `index.php`
 
 ```php
 <?php
 require 'vendor/autoload.php';
-require 'functions.php';
+require 'controllers/PageController.php';
+require 'controllers/ClientController.php';
 
 use App\Router\Router;
 
@@ -59,38 +67,56 @@ $middlewares = file_exists('middlewares.php') ? require 'middlewares.php' : [];
 Router::resolve($routes, $middlewares);
 ```
 
-Le fichier `middlewares.php` est optionnel. Si vous n'utilisez pas de middleware, vous pouvez ne pas le créer.
+Le fichier `middlewares.php` est optionnel. Si le fichier n'existe pas, le routeur continue avec un tableau vide.
 
-Le fichier `functions.php` est nécessaire seulement si vos routes appellent des fonctions. Si vos routes utilisent uniquement `file`, vous pouvez le retirer.
+### Étape 2 : créer les contrôleurs procéduraux
 
-### Étape 2 : créer `functions.php`
+Un contrôleur procédural est un fichier qui contient des fonctions.
 
-Mettez ici vos fonctions PHP.
+Exemple de fichier `controllers/PageController.php` :
 
 ```php
 <?php
 function accueil()
 {
-    echo "Bienvenue sur la page d'accueil !";
-}
-
-function afficherClient(array $params)
-{
-    echo "Client : " . $params['id'];
-}
-
-function verifierAuth()
-{
-    if (!isset($_SESSION['user'])) {
-        header('Location: /login');
-        exit;
-    }
+    require 'views/accueil.php';
 }
 ```
 
-La fonction `verifierAuth()` sert seulement si vous utilisez un middleware.
+Exemple de fichier `controllers/ClientController.php` :
 
-### Étape 3 : créer `routes.php`
+```php
+<?php
+require_once 'models/ClientModel.php';
+
+function afficherClient(array $params)
+{
+    $client = trouverClient($params['id']);
+
+    require 'views/client.php';
+}
+```
+
+Ici, la fonction contrôleur prépare les données, puis charge la vue.
+
+### Étape 3 : créer le modèle
+
+Un modèle procédural contient les fonctions liées aux données.
+
+Exemple de fichier `models/ClientModel.php` :
+
+```php
+<?php
+function trouverClient($id)
+{
+    return [
+        'id' => $id,
+        'nom' => 'Client exemple',
+    ];
+}
+```
+
+### Étape 4 : créer `routes.php`
 
 Mettez ici les routes de votre application.
 
@@ -109,7 +135,7 @@ return [
 ];
 ```
 
-`function` contient le nom de la fonction à appeler.
+`function` contient le nom de la fonction contrôleur à appeler.
 
 La clé `handler` reste acceptée pour compatibilité, mais `function` est plus simple pour un projet procédural.
 
@@ -125,7 +151,22 @@ return [
 ];
 ```
 
-### Étape 4 : créer `middlewares.php` si nécessaire
+### Étape 5 : créer les vues
+
+Exemple de fichier `views/accueil.php` :
+
+```php
+<h1>Bienvenue sur la page d'accueil</h1>
+```
+
+Exemple de fichier `views/client.php` :
+
+```php
+<h1>Client <?= htmlspecialchars($client['id']) ?></h1>
+<p>Nom : <?= htmlspecialchars($client['nom']) ?></p>
+```
+
+### Étape 6 : créer `middlewares.php` si nécessaire
 
 Ce fichier est optionnel.
 
@@ -133,6 +174,14 @@ Créez-le seulement si vous utilisez des middlewares dans vos routes.
 
 ```php
 <?php
+function verifierAuth()
+{
+    if (!isset($_SESSION['user'])) {
+        header('Location: /login');
+        exit;
+    }
+}
+
 return [
     'auth' => 'verifierAuth',
 ];
@@ -140,44 +189,37 @@ return [
 
 Ici, `auth` est le nom utilisé dans `routes.php`, et `verifierAuth` est la fonction appelée.
 
-### Variante : route vers un fichier PHP
-
-Au lieu d'appeler une fonction, une route peut inclure un fichier PHP.
-
-```php
-<?php
-return [
-    '/' => [
-        'file' => 'pages/accueil.php',
-        'methods' => ['GET'],
-    ],
-    'client/{id}' => [
-        'file' => 'pages/client.php',
-        'methods' => ['GET'],
-    ],
-];
-```
-
-Dans `pages/client.php`, les paramètres de route sont disponibles dans `$params`.
-
-```php
-<?php
-echo "Client : " . $params['id'];
-```
-
 Structure possible :
 
 ```text
 votre-projet/
 ├── vendor/
-├── pages/
+├── controllers/
+│   ├── PageController.php
+│   └── ClientController.php
+├── models/
+│   └── ClientModel.php
+├── views/
 │   ├── accueil.php
 │   └── client.php
-├── functions.php
 ├── routes.php
 ├── middlewares.php
 ├── index.php
 └── composer.json
+```
+
+### Variante : route directe vers un fichier PHP
+
+Cette variante existe, mais pour garder une structure MVC propre, préférez les fonctions contrôleurs.
+
+```php
+<?php
+return [
+    '/' => [
+        'file' => 'views/accueil.php',
+        'methods' => ['GET'],
+    ],
+];
 ```
 
 ## Projet orienté objet

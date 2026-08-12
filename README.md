@@ -39,6 +39,8 @@ $middlewares = file_exists('middlewares.php') ? require 'middlewares.php' : [];
 Router::resolve($routes, $middlewares);
 ```
 
+La ligne `require 'vendor/autoload.php';` charge Composer. Elle permet à PHP de trouver automatiquement le routeur installé dans le dossier `vendor/`.
+
 ## Utilisation dans un projet procédural
 
 Ce mode est adapté aux projets PHP sans classes contrôleurs.

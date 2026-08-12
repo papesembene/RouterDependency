@@ -2,10 +2,10 @@
 
 Un routeur PHP simple, léger et réutilisable pour vos applications web.
 
-Il peut être utilisé dans deux styles de projet :
+Il fonctionne avec deux types de projets :
 
 - Projet PHP procédural : routes vers des fonctions ou des fichiers PHP.
-- Projet PHP orienté objet : routes vers des classes contrôleurs et leurs méthodes.
+- Projet PHP orienté objet : routes vers des classes contrôleurs.
 
 ## Installation
 
@@ -15,21 +15,41 @@ composer require mrsems/router-php
 
 Cette commande installe automatiquement la dernière version stable compatible.
 
-Pour cibler explicitement la version `1.2` :
+Vous pouvez aussi cibler la version `1.2` :
 
 ```bash
 composer require mrsems/router-php:^1.2
 ```
 
-Sur Packagist, `dev-main` correspond à la branche de développement. Pour un projet stable, utilisez une version stable ou la contrainte `^1.2`.
+Sur Packagist, `dev-main` correspond à la branche de développement. Pour un projet normal, utilisez une version stable.
 
-## Initialisation
+## Fichiers utilisés
 
-Dans votre fichier `index.php` :
+Le routeur utilise généralement ces fichiers :
+
+- `index.php` : point d'entrée de votre application.
+- `routes.php` : liste des routes de votre application.
+- `middlewares.php` : liste des middlewares, optionnel.
+- `vendor/autoload.php` : fichier généré par Composer.
+
+La ligne suivante charge Composer :
+
+```php
+require 'vendor/autoload.php';
+```
+
+Elle permet à PHP de trouver automatiquement le routeur installé dans le dossier `vendor/`.
+
+## Projet procédural
+
+Utilisez ce mode si votre projet PHP fonctionne avec des fonctions ou des fichiers PHP simples.
+
+### Étape 1 : créer `index.php`
 
 ```php
 <?php
 require 'vendor/autoload.php';
+require 'functions.php';
 
 use App\Router\Router;
 
@@ -39,15 +59,13 @@ $middlewares = file_exists('middlewares.php') ? require 'middlewares.php' : [];
 Router::resolve($routes, $middlewares);
 ```
 
-La ligne `require 'vendor/autoload.php';` charge Composer. Elle permet à PHP de trouver automatiquement le routeur installé dans le dossier `vendor/`.
+Le fichier `middlewares.php` est optionnel. Si vous n'utilisez pas de middleware, vous pouvez ne pas le créer.
 
-## Utilisation dans un projet procédural
+Le fichier `functions.php` est nécessaire seulement si vos routes utilisent `handler`. Si vos routes utilisent uniquement `file`, vous pouvez le retirer.
 
-Ce mode est adapté aux projets PHP sans classes contrôleurs.
+### Étape 2 : créer `functions.php`
 
-### Routes vers des fonctions
-
-Exemple de fichier `functions.php` :
+Mettez ici vos fonctions PHP.
 
 ```php
 <?php
@@ -60,24 +78,21 @@ function afficherClient(array $params)
 {
     echo "Client : " . $params['id'];
 }
+
+function verifierAuth()
+{
+    if (!isset($_SESSION['user'])) {
+        header('Location: /login');
+        exit;
+    }
+}
 ```
 
-Chargez vos fonctions avant de lancer le routeur :
+La fonction `verifierAuth()` sert seulement si vous utilisez un middleware.
 
-```php
-<?php
-require 'vendor/autoload.php';
-require 'functions.php';
+### Étape 3 : créer `routes.php`
 
-use App\Router\Router;
-
-$routes = require 'routes.php';
-$middlewares = require 'middlewares.php';
-
-Router::resolve($routes, $middlewares);
-```
-
-Exemple de fichier `routes.php` :
+Mettez ici les routes de votre application.
 
 ```php
 <?php
@@ -94,9 +109,28 @@ return [
 ];
 ```
 
-### Routes vers des fichiers PHP
+`handler` contient le nom de la fonction à appeler.
 
-Vous pouvez aussi rediriger une route vers un fichier PHP existant.
+La clé `middlewares` est optionnelle. Ajoutez-la seulement si la route doit passer par un middleware.
+
+### Étape 4 : créer `middlewares.php` si nécessaire
+
+Ce fichier est optionnel.
+
+Créez-le seulement si vous utilisez des middlewares dans vos routes.
+
+```php
+<?php
+return [
+    'auth' => 'verifierAuth',
+];
+```
+
+Ici, `auth` est le nom utilisé dans `routes.php`, et `verifierAuth` est la fonction appelée.
+
+### Variante : route vers un fichier PHP
+
+Au lieu d'appeler une fonction, une route peut inclure un fichier PHP.
 
 ```php
 <?php
@@ -107,52 +141,54 @@ return [
     ],
     'client/{id}' => [
         'file' => 'pages/client.php',
-        'middlewares' => ['auth'],
         'methods' => ['GET'],
     ],
 ];
 ```
 
-Dans le fichier inclus, les paramètres de route sont disponibles dans `$params`.
-
-Exemple de `pages/client.php` :
+Dans `pages/client.php`, les paramètres de route sont disponibles dans `$params`.
 
 ```php
 <?php
 echo "Client : " . $params['id'];
 ```
 
-### Middlewares procéduraux
+Structure possible :
 
-Exemple de fichier `middlewares.php` :
+```text
+votre-projet/
+├── vendor/
+├── pages/
+│   ├── accueil.php
+│   └── client.php
+├── functions.php
+├── routes.php
+├── middlewares.php
+├── index.php
+└── composer.json
+```
+
+## Projet orienté objet
+
+Utilisez ce mode si votre projet PHP fonctionne avec des classes contrôleurs.
+
+### Étape 1 : créer `index.php`
 
 ```php
 <?php
-return [
-    'auth' => 'verifierAuth',
-];
+require 'vendor/autoload.php';
+
+use App\Router\Router;
+
+$routes = require 'routes.php';
+$middlewares = file_exists('middlewares.php') ? require 'middlewares.php' : [];
+
+Router::resolve($routes, $middlewares);
 ```
 
-Exemple de fonction middleware :
+Le fichier `middlewares.php` est optionnel.
 
-```php
-<?php
-function verifierAuth()
-{
-    if (!isset($_SESSION['user'])) {
-        header('Location: /login');
-        exit;
-    }
-}
-```
-
-## Utilisation dans un projet orienté objet
-
-Ce mode est adapté aux projets structurés avec des contrôleurs, middlewares et services.
-
-### Routes vers des contrôleurs
-
-Exemple de fichier `routes.php` :
+### Étape 2 : créer `routes.php`
 
 ```php
 <?php
@@ -160,7 +196,6 @@ return [
     '/' => [
         'controller' => App\Controllers\SecurityController::class,
         'method' => 'login',
-        'middlewares' => [],
         'methods' => ['GET', 'POST'],
     ],
     'client/dashboard' => [
@@ -178,7 +213,15 @@ return [
 ];
 ```
 
-Exemple de contrôleur :
+`controller` contient la classe à utiliser.
+
+`method` contient la méthode à appeler dans le contrôleur.
+
+La clé `middlewares` est optionnelle.
+
+### Étape 3 : créer le contrôleur
+
+Exemple de fichier `App/Controllers/UserController.php` :
 
 ```php
 <?php
@@ -198,9 +241,9 @@ class UserController
 }
 ```
 
-### Middlewares orientés objet
+### Étape 4 : créer `middlewares.php` si nécessaire
 
-Exemple de fichier `middlewares.php` :
+Ce fichier est optionnel.
 
 ```php
 <?php
@@ -209,7 +252,9 @@ return [
 ];
 ```
 
-Exemple de middleware :
+### Étape 5 : créer le middleware si nécessaire
+
+Exemple de fichier `App/Middlewares/AuthMiddleware.php` :
 
 ```php
 <?php
@@ -227,9 +272,26 @@ class AuthMiddleware
 }
 ```
 
+Structure possible :
+
+```text
+votre-projet/
+├── vendor/
+├── App/
+│   ├── Controllers/
+│   │   ├── SecurityController.php
+│   │   └── UserController.php
+│   └── Middlewares/
+│       └── AuthMiddleware.php
+├── routes.php
+├── middlewares.php
+├── index.php
+└── composer.json
+```
+
 ## Injection de dépendances
 
-Le routeur peut instancier automatiquement les dépendances des contrôleurs grâce à la réflexion.
+Le routeur peut instancier automatiquement les dépendances des contrôleurs.
 
 Exemple :
 
@@ -255,7 +317,7 @@ class DashboardController
 }
 ```
 
-Si un constructeur attend une interface, définissez le mapping interface vers classe concrète avant `Router::resolve()`.
+Si un constructeur attend une interface, définissez le mapping avant `Router::resolve()`.
 
 ```php
 <?php
@@ -266,47 +328,9 @@ Router::setDependencyMap([
 ]);
 ```
 
-## Structure conseillée
+## Récapitulatif des routes
 
-### Projet procédural
-
-```text
-votre-projet/
-├── vendor/
-├── pages/
-│   ├── accueil.php
-│   └── client.php
-├── functions.php
-├── routes.php
-├── middlewares.php
-├── index.php
-└── composer.json
-```
-
-### Projet orienté objet
-
-```text
-votre-projet/
-├── vendor/
-├── App/
-│   ├── Controllers/
-│   │   ├── SecurityController.php
-│   │   └── UserController.php
-│   ├── Middlewares/
-│   │   └── AuthMiddleware.php
-│   └── Repositories/
-│       └── UserRepository.php
-├── routes.php
-├── middlewares.php
-├── index.php
-└── composer.json
-```
-
-## Format des routes
-
-Chaque route peut utiliser l'un de ces formats.
-
-### Fonction procédurale
+Route vers une fonction :
 
 ```php
 [
@@ -315,7 +339,7 @@ Chaque route peut utiliser l'un de ces formats.
 ]
 ```
 
-### Fichier PHP
+Route vers un fichier :
 
 ```php
 [
@@ -324,7 +348,7 @@ Chaque route peut utiliser l'un de ces formats.
 ]
 ```
 
-### Contrôleur
+Route vers un contrôleur :
 
 ```php
 [
@@ -334,11 +358,21 @@ Chaque route peut utiliser l'un de ces formats.
 ]
 ```
 
+Route avec middleware :
+
+```php
+[
+    'handler' => 'accueil',
+    'middlewares' => ['auth'],
+    'methods' => ['GET'],
+]
+```
+
 ## Fonctionnalités
 
 - Support des méthodes HTTP : `GET`, `POST`, `PUT`, `DELETE`, etc.
 - Routes avec paramètres : `client/{id}`.
-- Middlewares par route.
+- Middlewares optionnels par route.
 - Support des fonctions procédurales.
 - Support des fichiers PHP procéduraux.
 - Support des contrôleurs orientés objet.

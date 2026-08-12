@@ -15,10 +15,10 @@ composer require mrsems/router-php
 
 Cette commande installe automatiquement la dernière version stable compatible.
 
-Vous pouvez aussi cibler la version `1.2` :
+Vous pouvez aussi cibler la version `1.3` :
 
 ```bash
-composer require mrsems/router-php:^1.2
+composer require mrsems/router-php:^1.3
 ```
 
 Sur Packagist, `dev-main` correspond à la branche de développement. Pour un projet normal, utilisez une version stable.
@@ -61,7 +61,7 @@ Router::resolve($routes, $middlewares);
 
 Le fichier `middlewares.php` est optionnel. Si vous n'utilisez pas de middleware, vous pouvez ne pas le créer.
 
-Le fichier `functions.php` est nécessaire seulement si vos routes utilisent `handler`. Si vos routes utilisent uniquement `file`, vous pouvez le retirer.
+Le fichier `functions.php` est nécessaire seulement si vos routes appellent des fonctions. Si vos routes utilisent uniquement `file`, vous pouvez le retirer.
 
 ### Étape 2 : créer `functions.php`
 
@@ -98,20 +98,32 @@ Mettez ici les routes de votre application.
 <?php
 return [
     '/' => [
-        'handler' => 'accueil',
+        'function' => 'accueil',
         'methods' => ['GET'],
     ],
     'client/{id}' => [
-        'handler' => 'afficherClient',
+        'function' => 'afficherClient',
         'middlewares' => ['auth'],
         'methods' => ['GET'],
     ],
 ];
 ```
 
-`handler` contient le nom de la fonction à appeler.
+`function` contient le nom de la fonction à appeler.
+
+La clé `handler` reste acceptée pour compatibilité, mais `function` est plus simple pour un projet procédural.
 
 La clé `middlewares` est optionnelle. Ajoutez-la seulement si la route doit passer par un middleware.
+
+Pour une route simple en `GET`, vous pouvez aussi écrire directement le nom de la fonction :
+
+```php
+<?php
+return [
+    '/' => 'accueil',
+    'client/{id}' => 'afficherClient',
+];
+```
 
 ### Étape 4 : créer `middlewares.php` si nécessaire
 
@@ -334,9 +346,15 @@ Route vers une fonction :
 
 ```php
 [
-    'handler' => 'nomDeLaFonction',
+    'function' => 'nomDeLaFonction',
     'methods' => ['GET'],
 ]
+```
+
+Route simple vers une fonction :
+
+```php
+'/' => 'nomDeLaFonction'
 ```
 
 Route vers un fichier :
@@ -362,7 +380,7 @@ Route avec middleware :
 
 ```php
 [
-    'handler' => 'accueil',
+    'function' => 'accueil',
     'middlewares' => ['auth'],
     'methods' => ['GET'],
 ]

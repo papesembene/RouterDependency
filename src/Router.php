@@ -74,14 +74,18 @@ class Router
     /**
      * Exécute une route avec les paramètres donnés.
      *
-     * @param array $route La configuration de la route
+     * @param mixed $route La configuration de la route
      * @param string $method La méthode HTTP
      * @param array $params Les paramètres extraits de l'URI
      * @param array $middlewares Les middlewares disponibles
      * @return void
      */
-    private static function executeRoute(array $route, string $method, array $params, array $middlewares): void
+    private static function executeRoute($route, string $method, array $params, array $middlewares): void
     {
+        if (!is_array($route)) {
+            $route = self::normalizeSimpleRoute($route);
+        }
+
         $allowedMethods = $route['methods'] ?? ['GET'];
         if (!in_array($method, $allowedMethods)) {
             http_response_code(405);
@@ -93,8 +97,9 @@ class Router
             self::runMiddlewares($route['middlewares'], $middlewares);
         }
 
-        if (isset($route['handler'])) {
-            self::executeHandler($route['handler'], $params);
+        $function = $route['function'] ?? $route['handler'] ?? null;
+        if ($function !== null) {
+            self::executeHandler($function, $params);
             return;
         }
 
@@ -105,7 +110,7 @@ class Router
 
         if (!isset($route['controller'], $route['method'])) {
             http_response_code(500);
-            echo "Route invalide : aucun contrôleur, handler ou fichier défini.";
+            echo "Route invalide : aucun contrôleur, fonction, handler ou fichier défini.";
             return;
         }
 
@@ -131,6 +136,21 @@ class Router
         } else {
             $controller->$action();
         }
+    }
+
+    /**
+     * Transforme une route courte en configuration complète.
+     *
+     * @param mixed $route La route courte.
+     * @return array La configuration de route.
+     */
+    private static function normalizeSimpleRoute($route): array
+    {
+        if (is_string($route) && is_file($route)) {
+            return ['file' => $route];
+        }
+
+        return ['function' => $route];
     }
 
     /**
